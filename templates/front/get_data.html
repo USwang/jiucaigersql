@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="http://cdn.bootcss.com/jquery/3.1.1/jquery.min.js"></script>
+    <script src ="{{ url_for('static',filename='front/js/getstocklist.js') }}"></script>
+    <title>数据库更新</title>
+</head>
+<body>
+<form action="" method="post">
+        <div>
+            <input type="text"  name="user" placeholder="用户名" style="margin-top: 10px; margin-bottom: 10px">
+        </div>
+        <div >
+            <input type="password"  name="password" placeholder="密码" autocomplete="off" style="margin-top: 10px; margin-bottom: 10px">
+        </div>
+        <div >
+            <button id="submit-btn-list" style="margin-top: 10px; margin-bottom: 10px">更新列表</button>
+        </div>
+        <div >
+            <button id="submit-btn-price" style="margin-top: 10px; margin-bottom: 10px">更新价格</button>
+        </div>
+        <div >
+            <button id="submit-btn-income" style="margin-top: 10px; margin-bottom: 10px">更新经营</button>
+        </div>
+</form>
+</body>
+</html>
