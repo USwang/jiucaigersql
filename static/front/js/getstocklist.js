@@ -1,28 +1,25 @@
 $(function () {
     $("#submit-btn-list").on("click",function (event) {
         event.preventDefault();
-        alert("一点击")
+        alert("点击")
         var $this = $(this);
         var user = $("input[name='user']").val();
         var password = $("input[name='password']").val();
-        console.log(user);
-        if (!user_id || user_id === ""){
-            window.location = "/login";
-            return;
-        }
-        var content = $("#comment-textarea").val();
-        var post_id = $this.attr("data-post-id");
-
+        $this.off('click');
+        $this.attr("disabled",'disabled');
         zyajax.post({
-            url:"/comment",
-            data:{content,post_id},
-            success:function (result) {
-                if(result['code']===200){
-                    window.location.reload();
-                }else {
-                    alert(result['message']);
-                }
+        url:"/getdatalist",
+        data:{user,password},
+        success:function (result) {
+            if(result['code']===200){
+                console.log('ok');
+            }else {
+                // 如果异常则返回 url:"/getdatalist"返回的的message
+                alert(result['message']);
+                $this.on('click');
+                $this.prop("disabled", false);
             }
+        }
         })
     });
 });

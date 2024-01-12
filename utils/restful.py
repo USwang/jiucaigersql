@@ -37,3 +37,6 @@ def params_error(message="参数错误！"):
 
 def server_error(message="服务器开小差啦！"):
   return _restful_result(code=HttpCode.servererror, message=message or '服务器内部错误', data=None)
+
+
+

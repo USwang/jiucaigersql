@@ -2,7 +2,7 @@ from exts import db
 
 
 class Stockdata(db.Model):
-    __tablename__ = 'stockdata'
+    __tablename__ = 'jcgstockdata'
     # stock 代码
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     # stock code number
