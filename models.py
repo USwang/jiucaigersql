@@ -9,6 +9,8 @@ class Stockdata(db.Model):
     SECURITY_CODE = db.Column(db.String(50), unique=True, nullable=True)
     # stock 名称
     SECURITY_NAME_ABBR = db.Column(db.String(50), nullable=True)
+    #财务数据更新日期
+    INCOME_updatetime = db.Column(db.DateTime, nullable=True)
     # 市场标签 沪，深，创，科创
     # markettag = db.Column(db.String(50), nullable=True)
     # 数据
