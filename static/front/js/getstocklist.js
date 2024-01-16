@@ -1,7 +1,6 @@
 $(function () {
     $("#submit-btn-list").on("click",function (event) {
         event.preventDefault();
-        alert("点击")
         const $this = $(this);
         const user = $("input[name='user']").val();
         const password = $("input[name='password']").val();
@@ -24,7 +23,6 @@ $(function () {
     });
     $("#submit-btn-price").on("click",function (event) {
         event.preventDefault();
-        alert("点击")
         const $this = $(this);
         const user = $("input[name='user']").val();
         const password = $("input[name='password']").val();
@@ -47,7 +45,6 @@ $(function () {
     });
     $("#submit-btn-income").on("click",function (event) {
         event.preventDefault();
-        alert("点击")
         const $this = $(this);
         const user = $("input[name='user']").val();
         const password = $("input[name='password']").val();

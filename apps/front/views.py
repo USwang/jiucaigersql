@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from flask import Blueprint, request, render_template
 from exts import db
-from getdatafuns import pageNumber, getjson_stocklist, getjson_stockprice, getjson_stockincome
+from getdatafuns import pageNumber, getjson_stocklist, getjson_stockprice, getjson_stockincome, dataprocess
 from models import Stockdata
 from utils import restful
 import numpy as np
@@ -16,6 +16,7 @@ def getdata():
 
 @bp.post('/getdatalist/')
 def getlist():
+    now = datetime.now()
     user = request.form.get('user')
     password = request.form.get('password')
     # 更新数据库
@@ -43,7 +44,7 @@ def getlist():
             print(e)
     else:
         return restful.params_error(message='账号或密码错误')
-    return restful.ok(message='finished update_list')
+    return restful.ok(message='finished update_list',data=now)
 
 
 @bp.post('/getdataprice/')
@@ -52,23 +53,23 @@ def get_price():
     password = request.form.get('password')
     # 更新数据库
     if user == 'wsy' and password == 'mtjb1..':
-        print('ok')
         lies = db.session.query(Stockdata).all()
         if bool(lies):
             for li in lies:
                 SECURITY_CODE = li.SECURITY_CODE
+                print(SECURITY_CODE)
                 da = db.session.query(Stockdata).filter_by(SECURITY_CODE=SECURITY_CODE).first()
                 try:
                     pricedatajson = getjson_stockprice(SECURITY_CODE)
+                    if da:
+                        da.PRICE_datajson = pricedatajson
+                        db.session.commit()
+                    else:
+                        stockdata = Stockdata(PRICE_datajson=pricedatajson)
+                        db.session.add(stockdata)
+                        db.session.commit()
                 except Exception as e:
                     print(e)
-                if da:
-                    da.PRICE_datajson = pricedatajson
-                    db.session.commit()
-                else:
-                    stockdata = Stockdata(PRICE_datajson=pricedatajson)
-                    db.session.add(stockdata)
-                    db.session.commit()
         else:
             return restful.ok(message='no list')
     return restful.ok(message='finished update_list')
@@ -128,3 +129,13 @@ def get_income():
     else:
         return restful.permission_error()
     return restful.ok()
+
+
+@bp.route('/getdataprocess/', methods=['POST','GET'])   #调试试图
+def getdataprocess():
+    lie = db.session.query(Stockdata).get(1)  # 获取stock列表
+    SECURITY_CODE = lie.SECURITY_CODE
+    PRICE_datajson = lie.PRICE_datajson
+    INCOME_datajson = lie.INCOME_datajson
+    priceprocess, incomeprocess = dataprocess(PRICE_datajson,INCOME_datajson)
+    return restful.ok(data=incomeprocess)

@@ -1,8 +1,10 @@
 #get stock_list from eastmoney web
+import numpy as np
 import requests
 import json
 from fake_useragent import UserAgent
 from datetime import datetime
+import pandas as pd
 
 
 def getjson_stocklist(page):
@@ -134,38 +136,141 @@ def getjson_stockincome(codenumber):
 
 
 def getjson_stockprice(codenumber):
-    # ua = UserAgent()
+    ua = UserAgent()
     url = 'http://21.push2his.eastmoney.com/api/qt/stock/kline/get?'
     headers = {
             'Cookie': 'qgqp_b_id=b87cee305c38b309d852cce9e3b9fb61; em_hq_fls=js; ct=weXh0EQEmoADGO5LvfNOBZ00awO1CghuGXp-jR4XkXyXyQiyq1UIBQGMwjHdwtQN0AxwgO3fMWl9uzOeSp1sA52HHwpu8MNWr3ICGvzljGkN9qBV9nuk_H1-S3SGS528HyXckjxHXxkfqofmcIJgcDWWh-wcXz34JiIVVwxjgQY; ut=FobyicMgeV6oOlrtxUaVoieuvidY5esdMCb41if8eqJiqFkwjYg2XAbdyOr2X4dfFAuLZp6zEVvi6dzeDfXQ-AmvlHTZlZ3bcLhnG2QmQB3OEIitjRXjxmZdVjfgoTl0R9Og4o-lLlFot79Tn7wCWlEmBE-Xgvm3SmKy2u_2-TT13T3Di_nblC7WJodHxryF1X8Pl-UvxHe5Ba7LrbinuGObOU_DTORRbA7CCJ680VXlO_XrihmSuhjM8Lv31Xbr4c5cw7OSmrJV114RfOXqtdOJA8M5cx0c; st_si=99026570019922; HAList=ty-1-600166-%u798F%u7530%u6C7D%u8F66%2Cty-1-600660-%u798F%u8000%u73BB%u7483%2Cty-0-300229-%u62D3%u5C14%u601D%2Cf-0-000001-%u4E0A%u8BC1%u6307%u6570; emshistory=%5B%22600166%22%5D; st_pvi=95106582090246; st_sp=2021-08-10%2015%3A37%3A11; st_inirUrl=https%3A%2F%2Fwww.baidu.com%2Flink; st_sn=10; st_psi=2023042709494629-113200301201-9045204979; st_asi=delete',
             'Referer': 'http://quote.eastmoney.com/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            # 'User-Agent': ua.random,
-            'Connection': 'close'
+            # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+            'User-Agent': ua.random,
             }
-    if codenumber[0]=='6':
+    if codenumber[0] == '6':
         code = '1.'+codenumber
     else:
         code = '0.'+codenumber
-    params ={
-            'cb':'jQuery3510406753977783055331682559914408',
-            'secid':code,
-            'ut':'fa5fd1943c7b386f172d6893dbfba10b',
-            'fields1':'f1,f2,f3,f4,f5,f6',
-            'fields2':'f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61',
-            'klt':'101',
-            'fqt':'1',
-            'beg':'0',
-            'end':'20500101',
-            'smplmt':'999999', #采样，决定返回的数据长度，默认值为460，可能导致数据不足，可调整为较大的值。
-            'lmt':'1000000',
-            '_':'1682559914436',
+    params = {
+            'cb': 'jQuery3510406753977783055331682559914408',
+            'secid': code,
+            'ut': 'fa5fd1943c7b386f172d6893dbfba10b',
+            'fields1': 'f1,f2,f3,f4,f5,f6',
+            'fields2': 'f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61',
+            'klt': '101',
+            'fqt': '1',
+            'beg': '0',
+            'end': '20500101',
+            'smplmt': '999999', #采样，决定返回的数据长度，默认值为460，可能导致数据不足，可调整为较大的值。
+            'lmt': '1000000',
+            '_': '1682559914436',
             }
     response = requests.get(url=url, headers=headers, params=params)
     data = response.text
     data = data[41:-2]  #将返回字符串转换为json格式
     return data
 
+
+def dataprocess(PRICE_datajson,INCOME_datajson):
+    # print(PRICE_datajson)
+    # print(INCOME_datajson)
+    PRICE_datajson = json.loads(PRICE_datajson)
+    klines = PRICE_datajson['data']['klines']
+    # print(klines)
+    klines_time = []
+    klines_price = []
+    for kline in klines[1:]:
+        kline_split = kline.split(",")
+        klines_time.append(kline_split[0])
+        klines_price.append(kline_split[2])
+    priceprocess = [klines_time, klines_price]
+    # 获取经营数据
+    report_date = []
+    # 扣非净利润
+    DEDUCT_PARENT_NETPROFIT = []
+    # 营业收入
+    OPERATE_INCOME = []
+    # 营业利润
+    OPERATE_PROFIT = []
+    income_json_datas = INCOME_datajson
+    #剔除空值
+    m = 0
+    while not income_json_datas[m]:
+        m = m + 1
+        # print(m)
+    income_json_data_1 = income_json_datas[m]  #获取第一个不为空的报告
+    report_date_1 = income_json_data_1['REPORT_DATE'][0:10] #获取第一个不为空的报告日期
+    #赋第一个值
+    report_date.append(report_date_1)
+    if income_json_data_1['DEDUCT_PARENT_NETPROFIT']:
+        DEDUCT_PARENT_NETPROFIT.append(round(income_json_data_1['DEDUCT_PARENT_NETPROFIT'] / 100000000, 3))
+    else:
+        # 如果是空则位0
+        DEDUCT_PARENT_NETPROFIT.append(0)
+    if income_json_data_1['OPERATE_INCOME']:
+        OPERATE_INCOME.append(round(income_json_data_1['OPERATE_INCOME'] / 100000000, 3))
+    else:
+        OPERATE_INCOME.append(0)
+    if income_json_data_1['OPERATE_PROFIT']:
+        OPERATE_PROFIT.append(round(income_json_data_1['OPERATE_PROFIT'] / 100000000, 3))
+    else:
+        OPERATE_PROFIT.append(0)
+        #去除重复值
+    n = 0
+    for income_json_data in income_json_datas[m:-1]:
+        report_date_current = income_json_data['REPORT_DATE'][0:10]
+        # 判断是否重复
+        if report_date[n] != report_date_current:
+            report_date.append(report_date_current)
+            # 判断是否为空
+            if income_json_data['DEDUCT_PARENT_NETPROFIT']:
+                DEDUCT_PARENT_NETPROFIT.append(round(income_json_data['DEDUCT_PARENT_NETPROFIT'] / 100000000, 3))
+            else:
+                #如果是空则位0
+                DEDUCT_PARENT_NETPROFIT.append(0)
+            if income_json_data['OPERATE_INCOME']:
+                OPERATE_INCOME.append(round(income_json_data['OPERATE_INCOME'] / 100000000, 3))
+            else:
+                OPERATE_INCOME.append(0)
+            if income_json_data['OPERATE_PROFIT']:
+                OPERATE_PROFIT.append(round(income_json_data['OPERATE_PROFIT'] / 100000000, 3))
+            else:
+                OPERATE_PROFIT.append(0)
+            n = n + 1
+        else:
+            continue
+    #将经营数据转换为季度，通过年的确定来判断，如果年份相同则减，不同则保持
+    #获取第一个数据,初始化
+    incomeprocess = [report_date, DEDUCT_PARENT_NETPROFIT, OPERATE_INCOME, OPERATE_PROFIT]
+    # year = incomeprocess[0][0][0:4]
+    # print(year)
+    report_date_q = []
+    # 扣非净利润
+    DEDUCT_PARENT_NETPROFIT_q = []
+    # 营业收入
+    OPERATE_INCOME_q = []
+    # 营业利润
+    OPERATE_PROFIT_q = []
+    report_date_q.append(incomeprocess[0][0])
+    DEDUCT_PARENT_NETPROFIT_q.append(incomeprocess[1][0])
+    OPERATE_INCOME_q.append(incomeprocess[2][0])
+    OPERATE_PROFIT_q.append(incomeprocess[3][0])
+    i=0
+    for date,ded,income,profit in zip(incomeprocess[0][1:-1],incomeprocess[1][1:-1],incomeprocess[2][1:-1],incomeprocess[3][1:-1]):  #incomeprocess[0]报告日期数组
+        date_year = date[0:4]
+        # print(date_year,report_date_q[i][0:4])
+        if report_date_q[i][0:4] != date_year:
+            report_date_q.append(date)
+            DEDUCT_PARENT_NETPROFIT_q.append(ded)
+            OPERATE_INCOME_q.append(income)
+            OPERATE_PROFIT_q.append(profit)
+        else:
+            report_date_q.append(date)
+            DEDUCT_PARENT_NETPROFIT_q.append(ded-DEDUCT_PARENT_NETPROFIT_q[i])
+            print(ded, DEDUCT_PARENT_NETPROFIT_q[i])
+            OPERATE_INCOME_q.append(income-OPERATE_INCOME_q[i])
+            OPERATE_PROFIT_q.append(profit-OPERATE_PROFIT_q[i])
+        i=i+1
+        # print(date,ded,income,profit)
+    incomeprocess_q = [report_date_q, DEDUCT_PARENT_NETPROFIT_q, OPERATE_INCOME_q, OPERATE_PROFIT_q]
+    return priceprocess, incomeprocess_q
 
 
 if __name__ == '__main__':

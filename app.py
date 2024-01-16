@@ -16,7 +16,7 @@ app.register_blueprint(front_bp)
 
 @app.route('/')
 def index():  # put application's code here
-    return 'Hello World!'
+    return '/getdata/'
 
 
 if __name__ == '__main__':

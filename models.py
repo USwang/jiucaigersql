@@ -34,3 +34,4 @@ class Stockdataprocess(db.Model):
     # 数据的处理主要是将股票价格与营业收入对齐。
     PRICE_dataprocess = db.Column(db.JSON)
     INCOME_dataprocess = db.Column(db.JSON)
+    INCOME_dataprocess_Quarterly = db.Column(db.JSON)
