@@ -57,6 +57,7 @@ def get_price():
         if bool(lies):
             for li in lies:
                 SECURITY_CODE = li.SECURITY_CODE
+                INCOME_datajson = li.INCOME_datajson
                 print(SECURITY_CODE)
                 da = db.session.query(Stockdata).filter_by(SECURITY_CODE=SECURITY_CODE).first()
                 try:
@@ -64,6 +65,14 @@ def get_price():
                     if da:
                         da.PRICE_datajson = pricedatajson
                         db.session.commit()
+                        #顺便更新处理
+                        if INCOME_datajson:
+                            priceprocess, incomeprocess = dataprocess(pricedatajson, INCOME_datajson)
+                            # print(priceprocess)
+                            # print(incomeprocess)
+                            da.PRICE_dataprocess = priceprocess
+                            da.INCOME_dataprocess = incomeprocess
+                            db.session.commit()
                     else:
                         stockdata = Stockdata(PRICE_datajson=pricedatajson)
                         db.session.add(stockdata)
@@ -84,15 +93,16 @@ def get_income():
     password = request.form.get('password')
     # print(password)
     id_ = request.form.get('id_')
-    numbers = [int(n) for n in id_.split(':')]
-    Lists = np.arange(numbers[0],numbers[1])
     if username == 'wsy' and password == 'mtjb1..':
         #如果填入了具体ID则单独更新
-        if numbers:
+        if id_:
+            numbers = [int(n) for n in id_.split(':')]
+            Lists = np.arange(numbers[0], numbers[1])
             for _id in Lists:
                 print(_id)
                 lie = db.session.query(Stockdata).get(_id) #获取stock列表
                 SECURITY_CODE = lie.SECURITY_CODE
+                PRICE_datajson = lie.PRICE_datajson
                 try:
                     income = getjson_stockincome(SECURITY_CODE)
                 except Exception as e:
@@ -100,6 +110,13 @@ def get_income():
                 lie.INCOME_datajson = income
                 lie.INCOME_updatetime = date_only
                 db.session.commit()
+                #更新收入后顺便处理数据
+                if PRICE_datajson:
+                    priceprocess, incomeprocess = dataprocess(PRICE_datajson, income)
+                    lie.PRICE_dataprocess = priceprocess
+                    lie.INCOME_dataprocess = incomeprocess
+                    db.session.commit()
+
         else:
             lies = db.session.query(Stockdata).all()  # 获取stock列表
             if lies:
@@ -108,6 +125,7 @@ def get_income():
                     print(ID)
                     INCOME_updatetime = li.INCOME_updatetime
                     SECURITY_CODE = li.SECURITY_CODE
+                    PRICE_datajson = li.PRICE_datajson
                     if not INCOME_updatetime:
                         try:
                             income = getjson_stockincome(SECURITY_CODE)
@@ -116,6 +134,11 @@ def get_income():
                         li.INCOME_datajson = income
                         li.INCOME_updatetime = date_only
                         db.session.commit()
+                        if PRICE_datajson:
+                            priceprocess, incomeprocess = dataprocess(PRICE_datajson, income)
+                            li.PRICE_dataprocess = priceprocess
+                            li.INCOME_dataprocess = incomeprocess
+                            db.session.commit()
                     elif INCOME_updatetime.date() == date_only:  #如果更新日期和数据库更新日期一致
                         continue
                     else:
@@ -126,6 +149,11 @@ def get_income():
                         li.INCOME_datajson = income
                         li.INCOME_updatetime = date_only
                         db.session.commit()
+                        if PRICE_datajson:
+                            priceprocess, incomeprocess = dataprocess(PRICE_datajson, income)
+                            li.PRICE_dataprocess = priceprocess
+                            li.INCOME_dataprocess = incomeprocess
+                            db.session.commit()
     else:
         return restful.permission_error()
     return restful.ok()

@@ -16,6 +16,8 @@ class Stockdata(db.Model):
     # 数据
     PRICE_datajson = db.Column(db.JSON)
     INCOME_datajson = db.Column(db.JSON)
+    PRICE_dataprocess = db.Column(db.JSON)
+    INCOME_dataprocess = db.Column(db.JSON)
 
     def __repr__(self):
         return f'<Stockdatabase {self.SECURITY_CODE}>'

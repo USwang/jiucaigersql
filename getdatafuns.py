@@ -170,7 +170,7 @@ def getjson_stockprice(codenumber):
 
 def dataprocess(PRICE_datajson,INCOME_datajson):
     # print(PRICE_datajson)
-    # print(INCOME_datajson)
+    # print(INCOME_datajson[-1])
     PRICE_datajson = json.loads(PRICE_datajson)
     klines = PRICE_datajson['data']['klines']
     # print(klines)
@@ -208,8 +208,8 @@ def dataprocess(PRICE_datajson,INCOME_datajson):
         OPERATE_INCOME.append(round(income_json_data_1['OPERATE_INCOME'] / 100000000, 3))
     else:
         OPERATE_INCOME.append(0)
-    if income_json_data_1['OPERATE_PROFIT']:
-        OPERATE_PROFIT.append(round(income_json_data_1['OPERATE_PROFIT'] / 100000000, 3))
+    if income_json_data_1['CONTINUED_NETPROFIT']:
+        OPERATE_PROFIT.append(round(income_json_data_1['CONTINUED_NETPROFIT'] / 100000000, 3))
     else:
         OPERATE_PROFIT.append(0)
         #去除重复值
@@ -229,8 +229,8 @@ def dataprocess(PRICE_datajson,INCOME_datajson):
                 OPERATE_INCOME.append(round(income_json_data['OPERATE_INCOME'] / 100000000, 3))
             else:
                 OPERATE_INCOME.append(0)
-            if income_json_data['OPERATE_PROFIT']:
-                OPERATE_PROFIT.append(round(income_json_data['OPERATE_PROFIT'] / 100000000, 3))
+            if income_json_data['CONTINUED_NETPROFIT']:
+                OPERATE_PROFIT.append(round(income_json_data['CONTINUED_NETPROFIT'] / 100000000, 3))
             else:
                 OPERATE_PROFIT.append(0)
             n = n + 1
@@ -239,6 +239,7 @@ def dataprocess(PRICE_datajson,INCOME_datajson):
     #将经营数据转换为季度，通过年的确定来判断，如果年份相同则减，不同则保持
     #获取第一个数据,初始化
     incomeprocess = [report_date, DEDUCT_PARENT_NETPROFIT, OPERATE_INCOME, OPERATE_PROFIT]
+    # print(len(report_date))
     # year = incomeprocess[0][0][0:4]
     # print(year)
     report_date_q = []
@@ -252,8 +253,9 @@ def dataprocess(PRICE_datajson,INCOME_datajson):
     DEDUCT_PARENT_NETPROFIT_q.append(incomeprocess[1][0])
     OPERATE_INCOME_q.append(incomeprocess[2][0])
     OPERATE_PROFIT_q.append(incomeprocess[3][0])
-    i=0
-    for date,ded,income,profit in zip(incomeprocess[0][1:-1],incomeprocess[1][1:-1],incomeprocess[2][1:-1],incomeprocess[3][1:-1]):  #incomeprocess[0]报告日期数组
+    # print(len(incomeprocess[0][1:]))
+    i = 0
+    for date, ded, income, profit in zip(incomeprocess[0][1:], incomeprocess[1][1:], incomeprocess[2][1:], incomeprocess[3][1:]):  #incomeprocess[0]报告日期数组
         date_year = date[0:4]
         # print(date_year,report_date_q[i][0:4])
         if report_date_q[i][0:4] != date_year:
@@ -262,15 +264,40 @@ def dataprocess(PRICE_datajson,INCOME_datajson):
             OPERATE_INCOME_q.append(income)
             OPERATE_PROFIT_q.append(profit)
         else:
+            # print(date, report_date_q[i])
             report_date_q.append(date)
-            DEDUCT_PARENT_NETPROFIT_q.append(ded-DEDUCT_PARENT_NETPROFIT_q[i])
-            print(ded, DEDUCT_PARENT_NETPROFIT_q[i])
-            OPERATE_INCOME_q.append(income-OPERATE_INCOME_q[i])
-            OPERATE_PROFIT_q.append(profit-OPERATE_PROFIT_q[i])
-        i=i+1
+            DEDUCT_PARENT_NETPROFIT_q.append(round(ded-DEDUCT_PARENT_NETPROFIT[i],3))
+            # print(ded, DEDUCT_PARENT_NETPROFIT_q[i])
+            OPERATE_INCOME_q.append(round(income-OPERATE_INCOME[i],3))
+            OPERATE_PROFIT_q.append(round(profit-OPERATE_PROFIT[i],3))
+        i = i+1
         # print(date,ded,income,profit)
     incomeprocess_q = [report_date_q, DEDUCT_PARENT_NETPROFIT_q, OPERATE_INCOME_q, OPERATE_PROFIT_q]
-    return priceprocess, incomeprocess_q
+    #按照报价插值,如果价格日期小于报告日期，则直接赋值，如果价格日期大于等于最后的报价日期则直接拓展
+    DEDUCT_PARENT_NETPROFIT_interp =[]
+    OPERATE_INCOME_interp =[]
+    OPERATE_PROFIT_interp =[]
+    last_report_date =datetime.strptime(report_date_q[-1], "%Y-%m-%d") #最近的报告日期
+    # print(last_report_date)
+    if klines_time:   #如果存在
+        for price_time_string in klines_time: #拿去第一个k线日期
+            price_time = datetime.strptime(price_time_string, "%Y-%m-%d")
+            if price_time <= last_report_date:
+                for report_date_interp,ded_interp,income_interp,profit_interp in zip(report_date_q, DEDUCT_PARENT_NETPROFIT_q, OPERATE_INCOME_q, OPERATE_PROFIT_q):
+                    report_date = datetime.strptime(report_date_interp, "%Y-%m-%d")
+                    if price_time <= report_date: #如果价格日期小于报告日期（第一个）则，当日营收为报告营收
+                        DEDUCT_PARENT_NETPROFIT_interp.append(ded_interp)
+                        OPERATE_INCOME_interp.append(income_interp)
+                        OPERATE_PROFIT_interp.append(profit_interp)
+                        break
+                    else:
+                        continue
+            else:
+                DEDUCT_PARENT_NETPROFIT_interp.append(DEDUCT_PARENT_NETPROFIT_q[-1])
+                OPERATE_INCOME_interp.append(OPERATE_INCOME_q[-1])
+                OPERATE_PROFIT_interp.append(OPERATE_PROFIT_q[-1])
+    incomeprocess_interp = [klines_time, DEDUCT_PARENT_NETPROFIT_interp, OPERATE_INCOME_interp, OPERATE_PROFIT_interp]
+    return priceprocess, incomeprocess_interp
 
 
 if __name__ == '__main__':
